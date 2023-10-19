@@ -2,9 +2,11 @@
 #define LED_GREEN 5
 #define LED_BLUE 3
 
+bool blink = true;
+
 void blinkRedLed()
 {
-    const unsigned long redLedBlinkInterval = 900UL;
+    const unsigned long redLedBlinkInterval = 500UL;
     static int redLedState = LOW;
     static unsigned long lastRedLedBlinkTime = 0UL;
 
@@ -20,7 +22,13 @@ void blinkRedLed()
         }
 
         lastRedLedBlinkTime += redLedBlinkInterval;
-        digitalWrite(LED_RED, redLedState);
+
+        if (!blink) {
+          digitalWrite(LED_RED, LOW);
+        } 
+        else {
+          digitalWrite(LED_RED, redLedState);
+        }
     }
 }
 
@@ -42,13 +50,19 @@ void blinkGreenLed()
         }
 
         lastGreenLedBlinkTime += greenLedBlinkInterval;
-        digitalWrite(LED_GREEN, greenLedState);
+        
+        if (!blink) {
+          digitalWrite(LED_GREEN, LOW);
+        } 
+        else {
+          digitalWrite(LED_GREEN, greenLedState);
+        }
     }
 }
 
 void blinkBlueLed()
 {
-    const unsigned long blueLedBlinkInterval = 1100UL;
+    const unsigned long blueLedBlinkInterval = 1500UL;
     static int blueLedState = LOW;
     static unsigned long lastBlueLedBlinkTime = 0UL;
 
@@ -64,7 +78,33 @@ void blinkBlueLed()
         }
 
         lastBlueLedBlinkTime += blueLedBlinkInterval;
-        digitalWrite(LED_BLUE, blueLedState);
+        
+        if (!blink) {
+          digitalWrite(LED_BLUE, LOW);
+        } 
+        else {
+          digitalWrite(LED_BLUE, blueLedState);
+        }
+    }
+}
+
+void stopBlinking() {
+    const unsigned long noBlinkInterval = 9000UL;
+    const unsigned long noBlinkDuration = 2000UL;
+
+    static unsigned long lastNoBlinkTime = 0UL;
+    static unsigned long noBlinkDurationStart = 9000UL;
+
+    if (millis() - lastNoBlinkTime >= noBlinkInterval)
+    {
+        if (millis() - noBlinkDurationStart < noBlinkDuration) {
+          blink = false;
+        }
+        else {
+          blink = true;
+          noBlinkDurationStart += noBlinkInterval + noBlinkDuration;
+          lastNoBlinkTime += noBlinkInterval + noBlinkDuration;
+        }
     }
 }
 
@@ -82,6 +122,7 @@ void setup()
 
 void loop()
 {
+    stopBlinking();
     blinkRedLed();
     blinkGreenLed();
     blinkBlueLed();
