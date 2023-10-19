@@ -6,6 +6,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #define GREEN_BUTTON 4
 
 bool working = false;
+bool display = true;
 int seconds = 0;
 
 void initButtons()
@@ -16,14 +17,17 @@ void initButtons()
 
 void displayTime()
 {
-    const unsigned long timeInterval = 1000UL;
+  lcd.setCursor(9, 0);
+  lcd.print(seconds);
+}
+
+void measureTime() {
+  const unsigned long timeInterval = 1000UL;
     static unsigned long lastTime = 0UL;
 
     if (millis() - lastTime >= timeInterval){
       if(working){
         seconds++;
-      lcd.setCursor(9, 0);
-      lcd.print(seconds);
       }
     
       lastTime += timeInterval;
@@ -91,7 +95,7 @@ void resetTimer()
   working = false;
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Seconds: ");
+  lcd.print("Seconds: 0");
 }
 
 void setup()
@@ -101,17 +105,24 @@ void setup()
     lcd.init();
     lcd.backlight();
 
-    lcd.print("Seconds: ");
+    lcd.print("Seconds: 0");
     lcd.setCursor(9, 0);
 }
 
 void loop(){
-  displayTime();
+  measureTime();
+  
+  if (display) displayTime();
+
   if(isGreenButtonPressed()) {
-     working = !working;
+     if (!working && display) working = !working;
+     else if(working && display) display = !display;
+     else if (working && !display) display = !display;
   }
 
   if(isRedButtonPressed()) {
     resetTimer();
+    working = false;
+    display = true;
   }
 }
