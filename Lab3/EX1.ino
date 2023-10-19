@@ -1,5 +1,6 @@
 #define RED_BUTTON 2
 #define GREEN_BUTTON 4
+
 #define LED_RED 6
 #define LED_GREEN 5
 #define LED_BLUE 3
@@ -9,7 +10,8 @@
 int currentColor = LED_RED;
 bool lastButtonRed = false;
 
-int led[] = {LED_RED, LED_GREEN, LED_BLUE};
+int led[] = {LED_RED, LED_GREEN, LED_BLUE, LED_RED, LED_GREEN, LED_RED};
+int ledsec[] = {LED_RED, LED_GREEN, LED_BLUE, LED_GREEN, LED_BLUE, LED_BLUE};
 
 void initRgb() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -57,6 +59,33 @@ bool isRedButtonPressed() {
   return isPressed;
 }
 
+bool isGreenButtonPressed() {
+  static int debounced_button_state = HIGH;
+  static int previous_reading = HIGH;
+  static unsigned long last_change_time = 0UL;
+  bool isPressed = false;
+
+  int current_reading = digitalRead(GREEN_BUTTON);
+
+  if (previous_reading != current_reading) {
+    last_change_time = millis();
+  }
+
+  if (millis() - last_change_time > DEBOUNCE_PERIOD) {
+    if (current_reading != debounced_button_state) {
+      if (debounced_button_state == LOW && current_reading == HIGH) {
+        isPressed = true;
+      }
+
+      debounced_button_state = current_reading;
+    }
+  }
+
+  previous_reading = current_reading;
+
+  return isPressed;
+}
+
 void setup() {
   initRgb();
   initButtons();
@@ -65,9 +94,25 @@ void setup() {
 int led_index = 0;
 
 void loop(){
+  if (isGreenButtonPressed()) {
+    digitalWrite(led[led_index], LOW);
+    digitalWrite(ledsec[led_index], LOW);
+
+    if(led_index < sizeof(led) / sizeof(led[led_index]) - 1) led_index++;
+    else led_index = 0;
+
+    digitalWrite(led[led_index], HIGH);
+    digitalWrite(ledsec[led_index], HIGH);
+  }
+
   if (isRedButtonPressed()) {
     digitalWrite(led[led_index], LOW);
-    led_index = ++led_index % 3;
+    digitalWrite(ledsec[led_index], LOW);
+
+    if (led_index > 0) led_index--;
+    else led_index = (sizeof(led) / sizeof(led[led_index])) - 1;
+
     digitalWrite(led[led_index], HIGH);
+    digitalWrite(ledsec[led_index], HIGH);
   }
 }
