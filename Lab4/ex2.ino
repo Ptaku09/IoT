@@ -35,23 +35,36 @@ void loop()
       command.replace("red-", "");
       red = command.toInt();
 
-      analogWrite(LED_RED, red);
-      analogWrite(LED_GREEN, 0);
-      analogWrite(LED_BLUE, 0);
+      if (command == "0") {
+        analogWrite(LED_RED, 0);
+      }
+
+      if (red != 0) {
+        analogWrite(LED_RED, red);
+      }
     } else if (command.startsWith("green")) {
       command.replace("green-", "");
+
+      if (command == "0") {
+        analogWrite(LED_GREEN, 0);
+      }
+
       green = command.toInt();
 
-      analogWrite(LED_RED, 0);
-      analogWrite(LED_GREEN, green);
-      analogWrite(LED_BLUE, 0);
+      if (green != 0) {
+        analogWrite(LED_GREEN, green);
+      }
     } else if (command.startsWith("blue")) {
       command.replace("blue-", "");
       blue = command.toInt();
 
-      analogWrite(LED_RED, 0);
-      analogWrite(LED_GREEN, 0);
-      analogWrite(LED_BLUE, blue);
+      if (command == "0") {
+        analogWrite(LED_BLUE, 0);
+      }
+
+      if (blue != 0) {
+        analogWrite(LED_BLUE, blue);
+      }
     } else {
       Serial.println(String("Unknown command '") + command + "'");
     }
