@@ -1,0 +1,11 @@
+# Datatypes (KEYWORD 1)
+DiodeHandler KEYWORD1
+
+# Methods and Functions (KEYWORD 2)
+init KEYWORD2
+runMeInLoop KEYWORD2
+showColor KEYWORD2
+writeAll
+writeRed
+writeGreen
+writeBlue
