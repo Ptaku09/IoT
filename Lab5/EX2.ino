@@ -10,50 +10,44 @@
 #define ENCODER2 A3
 
 #define RED_BUTTON 2
+#define GREEN_BUTTON 4
 
 #define DEBOUNCING_PERIOD 100
-#define RED_BUTTON_DEBOUNCING_PERIOD 10
+#define BUTTON_DEBOUNCING_PERIOD 10
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int menuItem = 0;
-String menuOptions[] = {"RED", "GREEN", "BLUE", "WHITE"};
+String menuOptions[] = {"RED", "GREEN", "BLUE"};
+String charPriorToColor = ">";
 
 int currentRGB[3] = {0, 0, 0};
 
-void printOuterMenu(int menuItem)
-{
-    lcd.clear();
-    lcd.setCursor(0, 0);
+bool menuActivated = false;
 
-    if (menuItem == 3)
-    {
-        lcd.print("WHITE");
-    }
-    else
-    {
-        lcd.print(menuOptions[menuItem]);
-        lcd.setCursor(0, 1);
-        lcd.print(menuOptions[(menuItem + 1) % 4]);
-    }
+void initMenu() {
+  lcd.setCursor(0, 0);
+
+  lcd.print("STEROWANIE RGB");
+  lcd.setCursor(0, 1);
+
+  lcd.print(">RED 0");
 }
 
-void printInnerMenu()
+void printMenu()
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-
-    for (size_t i = 0; i < currentRGB[menuItem % 3] / 17; i++)
-    {
-        lcd.print("#");
-    }
-
     lcd.setCursor(0, 1);
-    lcd.print(currentRGB[0]);
-    lcd.print(" ");
-    lcd.print(currentRGB[1]);
-    lcd.print(" ");
-    lcd.print(currentRGB[2]);
+
+    int goodMenuItem = abs(menuItem);
+    if(menuActivated) charPriorToColor = "*";
+    else charPriorToColor = ">";
+
+    lcd.print(charPriorToColor + menuOptions[goodMenuItem % 3] + " " + currentRGB[goodMenuItem % 3] + "     ");
+}
+
+void initSerial() {
+    Serial.begin(9600);
+    while (!Serial) {}
 }
 
 void setup()
@@ -63,19 +57,20 @@ void setup()
     pinMode(LED_BLUE, OUTPUT);
 
     pinMode(RED_BUTTON, INPUT_PULLUP);
+    pinMode(GREEN_BUTTON, INPUT_PULLUP);
 
     pinMode(ENCODER1, INPUT_PULLUP);
     pinMode(ENCODER2, INPUT_PULLUP);
 
     lcd.init();
     lcd.backlight();
-    printOuterMenu(menuItem);
+    initMenu();
 
     PCICR |= (1 << PCIE1);
     PCMSK1 |= (1 << PCINT10);
-}
 
-bool currentlyOuterMenu = true;
+    initSerial();
+}
 
 volatile int encoder1 = HIGH;
 volatile int encoder2 = HIGH;
@@ -108,77 +103,52 @@ void loop()
     {
         if (en2 == HIGH)
         {
-            if (currentlyOuterMenu)
+            if (!menuActivated)
             {
-                if (menuItem < 3) menuItem++;
+              menuItem++;
             } 
             else {
-                encoderValue = currentRGB[menuItem % 3];
-                if (encoderValue < 255)
-                encoderValue += 15;
+              int goodMenuItem = abs(menuItem);
+              encoderValue = currentRGB[goodMenuItem % 3];
+              if (encoderValue < 100)
+              encoderValue += 1;
+              currentRGB[goodMenuItem % 3] = encoderValue;
             }
         }
         else
         {
-            if (currentlyOuterMenu)
+            if (!menuActivated)
             {
-                if (menuItem > 0) menuItem--;
+              menuItem--;
             }
             else {
-                encoderValue = currentRGB[menuItem % 3];
-                if (encoderValue > 0)
-                encoderValue -= 15;
+              int goodMenuItem = abs(menuItem);
+              encoderValue = currentRGB[goodMenuItem % 3];
+              if (encoderValue > 0) encoderValue -= 1;
+              currentRGB[goodMenuItem % 3] = encoderValue;
             }
         }
         lastChangeTimestamp = timestamp;
 
-        navigateOuterMenu();
         lastChangeTimestamp = timestamp;
     }
     lastEn1 = en1;
 
-    if (wasRedButtonClicked())
+    if (wasGreenButtonClicked())
     {
-        currentlyOuterMenu = !currentlyOuterMenu;
-        if (currentlyOuterMenu)
-        {
-            printOuterMenu(menuItem);
-        }
-        else
-        {
-            printInnerMenu();
-        }
+        menuActivated = true;
     }
-}
 
-void navigateOuterMenu()
-{
-    if (currentlyOuterMenu)
-    {
-        printOuterMenu(menuItem);
+    if(wasRedButtonClicked()) {
+      menuActivated = false;
     }
-    else
-    {
-        navigateInnerMenu();
-    }
-}
 
-void navigateInnerMenu()
-{
-    if (menuItem == 3)
-    {
-        currentRGB[0] = encoderValue;
-        currentRGB[1] = encoderValue;
-        currentRGB[2] = encoderValue;
-    }
-    else currentRGB[menuItem] = encoderValue;
-
-    printInnerMenu();
+    printMenu();
+    Serial.println(String(currentRGB[0]) + " " + String(currentRGB[1]) + " " + String(currentRGB[2]));
     changeRGB();
 }
 
-bool wasRedButtonClicked()
-{
+bool wasRedButtonClicked(){
     static int debounced_button_state = HIGH;
     static int previous_reading = HIGH;
     static unsigned long last_change_time = 0UL;
@@ -191,7 +161,37 @@ bool wasRedButtonClicked()
         last_change_time = millis();
     }
 
-    if (millis() - last_change_time > RED_BUTTON_DEBOUNCING_PERIOD)
+    if (millis() - last_change_time > BUTTON_DEBOUNCING_PERIOD)
+    {
+        if (current_reading != debounced_button_state)
+        {
+            if (debounced_button_state == HIGH && current_reading == LOW)
+            {
+                isPressed = true;
+            }
+            debounced_button_state = current_reading;
+        }
+    }
+
+    previous_reading = current_reading;
+
+    return isPressed;
+}
+
+bool wasGreenButtonClicked(){
+    static int debounced_button_state = HIGH;
+    static int previous_reading = HIGH;
+    static unsigned long last_change_time = 0UL;
+    bool isPressed = false;
+
+    int current_reading = digitalRead(GREEN_BUTTON);
+
+    if (previous_reading != current_reading)
+    {
+        last_change_time = millis();
+    }
+
+    if (millis() - last_change_time > BUTTON_DEBOUNCING_PERIOD)
     {
         if (current_reading != debounced_button_state)
         {
@@ -209,13 +209,11 @@ bool wasRedButtonClicked()
 }
 
 void changeRGB() {
-    digitalWrite(LED_RED, currentRGB[0]);
-    digitalWrite(LED_GREEN, currentRGB[1]);
-    digitalWrite(LED_BLUE, currentRGB[2]);
-}
+    int red = map(currentRGB[0], 0, 100, 0, 255);
+    int green = map(currentRGB[1], 0, 100, 0, 255);
+    int blue = map(currentRGB[2], 0, 100, 0, 255);
 
-void minOfThree(int a, int b, int c) {
-    if (a < b && a < c) return a;
-    if (b < a && b < c) return b;
-    return c;
+    digitalWrite(LED_RED, red);
+    digitalWrite(LED_GREEN, green);
+    digitalWrite(LED_BLUE, blue);
 }
